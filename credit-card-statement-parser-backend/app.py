@@ -1,5 +1,4 @@
 import os
-import re
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from utils.pdf_utils import extract_text
@@ -7,19 +6,16 @@ from parsers.router import parse_statement
 
 app = Flask(__name__)
 
-# Explicit CORS whitelist for frontend origins (prod + local dev + any Vercel previews)
+# Explicit CORS whitelist for frontend origins (prod + local dev)
 ALLOWED_ORIGINS = [
     "https://credit-card-statement-parser-lhv3yifns-purva0017s-projects.vercel.app",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    re.compile(r"^https://.*\.vercel\.app$"),
 ]
 CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS}})
 
-@app.route("/health", methods=["GET", "OPTIONS"])
+@app.get("/health")
 def health():
-    if request.method == "OPTIONS":
-        return ("", 204)
     return jsonify({"status": "ok"})
 
 # Main parsing endpoint
