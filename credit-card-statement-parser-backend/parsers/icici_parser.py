@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from utils.text_utils import detect_currency_symbol, detect_currency_code
+from utils.text_utils import detect_currency_symbol
 
 def extract_date(text):
     match = re.search(r'([A-Za-z]+\s\d{1,2},\s\d{4})', text)
@@ -34,7 +34,6 @@ def parse_icici(text):
         "payment_due_date": None,
         "total_amount_due": None,
         "currency_symbol": detect_currency_symbol(text),
-        "currency": detect_currency_code(text),
     }
 
     # --- CARD LAST 4 ---

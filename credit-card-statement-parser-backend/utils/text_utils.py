@@ -25,12 +25,3 @@ def detect_currency_symbol(text: str) -> str:
     if re.search(r"(\$|\bUSD\b)", t, re.IGNORECASE):
         return "$"
     return "₹"
-
-def detect_currency_code(text: str) -> str:
-    """Detect currency code (unit) from text. Defaults to INR if uncertain."""
-    t = text or ""
-    if re.search(r"(₹|\bRs\.?\b|\bINR\b)", t, re.IGNORECASE):
-        return "INR"
-    if re.search(r"(\$|\bUSD\b)", t, re.IGNORECASE):
-        return "USD"
-    return "INR"

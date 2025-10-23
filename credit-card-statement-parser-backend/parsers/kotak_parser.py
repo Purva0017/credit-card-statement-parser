@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from utils.text_utils import detect_currency_symbol, detect_currency_code
+from utils.text_utils import detect_currency_symbol
 
 def extract_date(text):
     """Extract date in format like 20-Nov-2024 or 20/11/2024 and normalize to YYYY-MM-DD"""
@@ -26,7 +26,6 @@ def parse_kotak(text):
         "payment_due_date": None,
         "total_amount_due": None,
         "currency_symbol": detect_currency_symbol(text),
-        "currency": detect_currency_code(text),
     }
 
     # --- CARD LAST 4 ---
