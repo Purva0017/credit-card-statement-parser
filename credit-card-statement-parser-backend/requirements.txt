@@ -2,3 +2,8 @@ flask
 flask-cors
 pdfplumber
 PyMuPDF
+
+# OCR/image-based PDF support (enable if you want OCR fallback)
+pdf2image
+pytesseract
+Pillow
