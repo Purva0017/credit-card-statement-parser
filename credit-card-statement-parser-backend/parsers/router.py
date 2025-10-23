@@ -1,6 +1,7 @@
 import re
 from parsers.icici_parser import parse_icici
 from parsers.kotak_parser import parse_kotak
+from parsers.hdfc_parser import parse_hdfc
 
 def detect_bank(text: str) -> str:
     text_lower = text.lower()
@@ -19,6 +20,8 @@ def parse_statement(text: str):
         return parse_icici(text)
     elif bank == "KOTAK":
         return parse_kotak(text)
+    elif bank == "HDFC":
+        return parse_hdfc(text)
     else:
         return {
             "bank": bank,
