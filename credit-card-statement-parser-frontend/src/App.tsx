@@ -7,7 +7,8 @@ interface ParsedData {
   statement_date: string | null;
   payment_due_date: string | null;
   total_amount_due: string | null;
-  [key: string]: string | number | null;
+  currency_symbol?: string | null;
+  [key: string]: string | number | null | undefined;
 }
 
 interface SnackbarMessage {
@@ -232,7 +233,8 @@ function App() {
 
     if (key === 'total_amount_due' && value) {
       const numValue = typeof value === 'string' ? parseFloat(value) : value;
-      return `$${numValue.toFixed(2)}`;
+      const symbol = parsedData?.currency_symbol || '₹';
+      return `${symbol}${numValue.toFixed(2)}`;
     }
 
     return String(value);
@@ -454,14 +456,14 @@ function App() {
                 <div className={`${glassEffect} rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]`}>
                   <div className="grid md:grid-cols-2 gap-6">
                     {Object.entries(parsedData)
-                      .filter(([key]) => key !== 'total_amount_due')
+                      .filter(([key]) => key !== 'total_amount_due' && key !== 'currency_symbol')
                       .map(([key, value]) => (
                         <div key={key}>
                           <p className={`text-sm mb-2 ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-500'}`}>
                             {formatFieldName(key)}
                           </p>
                           <p className="text-lg font-medium">
-                            {formatFieldValue(key, value)}
+                            {formatFieldValue(key, value ?? null)}
                           </p>
                         </div>
                       ))}
