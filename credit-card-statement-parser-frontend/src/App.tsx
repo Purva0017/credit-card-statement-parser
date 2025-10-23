@@ -8,6 +8,7 @@ interface ParsedData {
   payment_due_date: string | null;
   total_amount_due: string | null;
   currency_symbol?: string | null;
+  currency?: string | null; // e.g., INR, USD
   [key: string]: string | number | null | undefined;
 }
 
@@ -233,7 +234,9 @@ function App() {
 
     if (key === 'total_amount_due' && value) {
       const numValue = typeof value === 'string' ? parseFloat(value) : value;
-      const symbol = parsedData?.currency_symbol || '₹';
+      // Prefer symbol only; default to ₹ if unknown. If backend sent only currency code, map USD->$, else ₹
+      const symbol = parsedData?.currency_symbol
+        ?? (parsedData?.currency === 'USD' ? '$' : '₹');
       return `${symbol}${numValue.toFixed(2)}`;
     }
 
@@ -456,7 +459,7 @@ function App() {
                 <div className={`${glassEffect} rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]`}>
                   <div className="grid md:grid-cols-2 gap-6">
                     {Object.entries(parsedData)
-                      .filter(([key]) => key !== 'total_amount_due' && key !== 'currency_symbol')
+                      .filter(([key]) => key !== 'total_amount_due' && key !== 'currency_symbol' && key !== 'currency')
                       .map(([key, value]) => (
                         <div key={key}>
                           <p className={`text-sm mb-2 ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-500'}`}>
