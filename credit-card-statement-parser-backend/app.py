@@ -40,19 +40,10 @@ def parse_post():
     mode = (request.args.get("mode") or "auto").lower()  # auto | ocr | text
     if mode not in ("auto", "ocr", "text"):
         mode = "auto"
-    # Page limits (tunable via query params)
     try:
-        text_pages = int(request.args.get("text_pages", "2"))
+        ocr_pages = int(request.args.get("ocr_pages", "10"))
     except ValueError:
-        text_pages = 2
-    try:
-        ocr_pages = int(request.args.get("ocr_pages", "3"))
-    except ValueError:
-        ocr_pages = 3
-
-    # Clamp sensible minimums
-    text_pages = max(1, text_pages)
-    ocr_pages = max(1, ocr_pages)
+        ocr_pages = 10
 
     force_ocr = mode == "ocr"
     auto_ocr = mode == "auto"
@@ -62,24 +53,12 @@ def parse_post():
         force_ocr=force_ocr,
         auto_ocr=auto_ocr,
         ocr_max_pages=ocr_pages,
-        text_max_pages=text_pages,
     )
 
     if not text.strip():
         return jsonify({"error": "Unable to extract text from PDF"}), 422
 
     result = parse_statement(text)
-
-    # for debugging
-    if request.args.get("debug") == "1":
-        result["__debug"] = {
-            "raw_preview": text,
-            "raw_length": len(text),
-            "requested_mode": mode,
-            "extraction_method": getattr(extract_text, "last_method", None),
-            "ocr_pages": ocr_pages,
-            "text_pages": text_pages,
-        }
 
     return jsonify(result)
 
