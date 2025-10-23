@@ -1,18 +1,29 @@
+import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from utils.pdf_utils import extract_text
 from parsers.router import parse_statement
 
 app = Flask(__name__)
-CORS(app)
+
+# Explicit CORS whitelist for frontend origins (prod + local dev)
+ALLOWED_ORIGINS = [
+    "https://credit-card-statement-parser-lhv3yifns-purva0017s-projects.vercel.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS}})
 
 @app.get("/health")
 def health():
     return jsonify({"status": "ok"})
 
 # Main parsing endpoint
-@app.post("/parse")
+@app.route("/parse", methods=["POST", "OPTIONS"])
 def parse_post():
+    # Handle CORS preflight
+    if request.method == "OPTIONS":
+        return ("", 204)
     if "file" not in request.files:
         return jsonify({"error": "No file provided"}), 400
 
@@ -48,4 +59,6 @@ def parse_post():
     return jsonify(result)
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    # Bind to 0.0.0.0 and use PORT env (required by many hosting providers like Render)
+    port = int(os.environ.get("PORT", "5000"))
+    app.run(host="0.0.0.0", port=port, debug=True)

@@ -16,7 +16,8 @@ interface SnackbarMessage {
   type: 'success' | 'error';
 }
 
-const API_BASE_URL = 'http://127.0.0.1:5000';
+// Prefer env override if provided, otherwise default to hosted backend
+const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL ?? 'https://credit-card-statement-parser-t0er.onrender.com';
 
 function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
