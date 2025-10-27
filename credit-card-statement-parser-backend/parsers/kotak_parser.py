@@ -1,5 +1,6 @@
 import re
 from datetime import datetime
+from utils.text_utils import detect_currency_symbol
 
 def extract_date(text):
     """Extract date in format like 20-Nov-2024 or 20/11/2024 and normalize to YYYY-MM-DD"""
@@ -23,7 +24,8 @@ def parse_kotak(text):
         "card_last4": None,
         "statement_date": None,
         "payment_due_date": None,
-        "total_amount_due": None
+        "total_amount_due": None,
+        "currency_symbol": None,
     }
 
     # --- CARD LAST 4 ---
@@ -58,5 +60,8 @@ def parse_kotak(text):
     total_line = re.search(r'TotalAmountDue.*?([\d,]+\.\d{2})', text, re.IGNORECASE)
     if total_line:
         result["total_amount_due"] = total_line.group(1).replace(",", "")
+
+    # Ensure currency symbol present
+    result["currency_symbol"] = result.get("currency_symbol") or detect_currency_symbol(text)
 
     return result

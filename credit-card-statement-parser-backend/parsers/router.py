@@ -1,6 +1,8 @@
 import re
 from parsers.icici_parser import parse_icici
 from parsers.kotak_parser import parse_kotak
+from parsers.generic_parser import parse_generic
+from utils.text_utils import detect_currency_symbol
 
 def detect_bank(text: str) -> str:
     text_lower = text.lower()
@@ -16,14 +18,18 @@ def detect_bank(text: str) -> str:
 def parse_statement(text: str):
     bank = detect_bank(text)
     if bank == "ICICI":
-        return parse_icici(text)
+        res = parse_icici(text)
+        if not res.get("currency_symbol"):
+            res["currency_symbol"] = detect_currency_symbol(text)
+        return res
     elif bank == "KOTAK":
-        return parse_kotak(text)
+        res = parse_kotak(text)
+        if not res.get("currency_symbol"):
+            res["currency_symbol"] = detect_currency_symbol(text)
+        return res
     else:
-        return {
-            "bank": bank,
-            "card_last4": None,
-            "statement_date": None,
-            "payment_due_date": None,
-            "total_amount_due": None
-        }
+        # Use generic parser for HDFC and all other banks
+        res = parse_generic(text, bank=bank)
+        if not res.get("currency_symbol"):
+            res["currency_symbol"] = detect_currency_symbol(text)
+        return res

@@ -1,5 +1,6 @@
 import re
 from datetime import datetime
+from utils.text_utils import detect_currency_symbol
 
 def extract_date(text):
     match = re.search(r'([A-Za-z]+\s\d{1,2},\s\d{4})', text)
@@ -11,7 +12,7 @@ def extract_date(text):
     return None
 
 def fuzzy_label_regex(label):
-    """
+    r"""
     Build a regex to handle:
     - repeated letters (S+T+A+T+E+M+E+N+T+)
     - arbitrary spaces/newlines between letters (\s*)
@@ -31,7 +32,8 @@ def parse_icici(text):
         "card_last4": None,
         "statement_date": None,
         "payment_due_date": None,
-        "total_amount_due": None
+        "total_amount_due": None,
+        "currency_symbol": None,
     }
 
     # --- CARD LAST 4 ---
@@ -62,8 +64,11 @@ def parse_icici(text):
             result["payment_due_date"] = extract_date(due_fallback.group(1))
 
     # --- TOTAL AMOUNT DUE ---
-    amt_match = re.search(r'(total\s*amount\s*due)[^\d]*[`₹]?\s?([\d,]+\.\d{2})', text, re.IGNORECASE)
+    amt_match = re.search(r'(total\s*amount\s*due)[^\d]*[`₹$]?\s?([\d,]+\.\d{2})', text, re.IGNORECASE)
     if amt_match:
         result["total_amount_due"] = amt_match.group(2).replace(",", "")
+
+    # Ensure currency symbol present
+    result["currency_symbol"] = result.get("currency_symbol") or detect_currency_symbol(text)
 
     return result

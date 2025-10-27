@@ -1,21 +1,26 @@
 import os
+import re
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from utils.pdf_utils import extract_text
+from utils.text_utils import detect_currency_symbol
 from parsers.router import parse_statement
 
 app = Flask(__name__)
 
-# Explicit CORS whitelist for frontend origins (prod + local dev)
+# Explicit CORS whitelist for frontend origins (prod + local dev + any Vercel previews)
 ALLOWED_ORIGINS = [
     "https://credit-card-statement-parser-lhv3yifns-purva0017s-projects.vercel.app",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    re.compile(r"^https://.*\.vercel\.app$"),
 ]
 CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS}})
 
-@app.get("/health")
+@app.route("/health", methods=["GET", "OPTIONS"])
 def health():
+    if request.method == "OPTIONS":
+        return ("", 204)
     return jsonify({"status": "ok"})
 
 # Main parsing endpoint
@@ -55,6 +60,19 @@ def parse_post():
         return jsonify({"error": "Unable to extract text from PDF"}), 422
 
     result = parse_statement(text)
+    # Safety: ensure currency symbol is present
+    if not result.get("currency_symbol"):
+        result["currency_symbol"] = detect_currency_symbol(text)
+
+    # Optional debug payload: include extracted text and a few hints
+    if (request.args.get("debug") or "0").strip() == "1":
+        result["__debug"] = {
+            "raw_text": text,
+            "raw_length": len(text),
+            "requested_mode": mode,
+            "extraction_method": getattr(extract_text, "last_method", None),
+            "ocr_pages": ocr_pages,
+        }
 
     return jsonify(result)
 
