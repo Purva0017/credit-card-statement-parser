@@ -19,9 +19,10 @@ Requirements:
 
 ## What This Submission Demonstrates
 
-- Currently implemented issuers: ICICI and Kotak
+- Currently implemented issuers: ICICI, Kotak, HDFC
   - ICICI parser: [`parsers.icici_parser.parse_icici`](credit-card-statement-parser-backend/parsers/icici_parser.py)
   - Kotak parser: [`parsers.kotak_parser.parse_kotak`](credit-card-statement-parser-backend/parsers/kotak_parser.py)
+  - HDFC parser: [`parsers.hdfc_parser.parse_hdfc`](credit-card-statement-parser-backend/parsers/hdfc_parser.py)
   - Bank routing + detection: [`parsers.router.parse_statement`](credit-card-statement-parser-backend/parsers/router.py)
 
 - Extracted data points (5):
@@ -33,7 +34,7 @@ Requirements:
 
 - Real-world PDF handling:
   - Hybrid text extraction: [`utils.pdf_utils.extract_text`](credit-card-statement-parser-backend/utils/pdf_utils.py)
-    - Tries pdfplumber → PyMuPDF; falls back to OCR (Tesseract) when needed.
+    - Tries PyMuPDF → pdfplumber; falls back to OCR (Tesseract) when needed.
 
 - Modern Web UI:
   - Upload PDF, see parsed results, download JSON
@@ -90,11 +91,14 @@ Endpoints:
   - file: your PDF
   - Optional query params:
     - mode=auto|text|ocr (default: auto)
-    - ocr_pages=<int> (default: 10)
+    - text_pages=<int> (default: 2) — limit initial text extraction pages
+    - ocr_pages=<int> (default: 3) — limit OCR pages for scanned PDFs
+    - debug=1 — include extraction metadata in the response
 
 Example:
 ```bash
-curl -F "file=@/path/to/statement.pdf" "http://127.0.0.1:5000/parse?mode=auto&ocr_pages=8"
+curl -F "file=@/path/to/statement.pdf" \
+  "http://127.0.0.1:5000/parse?mode=auto&text_pages=2&ocr_pages=3&debug=1"
 ```
 
 Sample response:
@@ -117,12 +121,12 @@ Install and run:
 - App: http://localhost:5173 (by default)
 
 Configuration:
-- The frontend calls the backend at API_BASE_URL = http://127.0.0.1:5000 inside [src/App.tsx](credit-card-statement-parser-frontend/src/App.tsx). Adjust if your backend runs elsewhere.
+- The frontend API base can be configured via `VITE_API_BASE_URL` (or adjusted in [src/App.tsx](credit-card-statement-parser-frontend/src/App.tsx)). For local dev, use `http://127.0.0.1:5000`.
 
 ## Design Highlights
 
 - Robust PDF extraction:
-  - pdfplumber → PyMuPDF → OCR via Tesseract
+  - PyMuPDF → pdfplumber → OCR via Tesseract
   - Implementation: [`utils.pdf_utils.extract_text`](credit-card-statement-parser-backend/utils/pdf_utils.py)
 
 - Clean parsing boundary:
@@ -137,7 +141,7 @@ Configuration:
 
 ## Extending to 5+ Issuers
 
-Add a new bank (e.g., HDFC, SBI, Axis):
+Add a new bank (e.g., SBI, Axis):
 1) Create a parser module: credit-card-statement-parser-backend/parsers/<bank>_parser.py
 2) Implement a `parse_<bank>(text: str) -> dict` returning the same keys.
 3) Update detection and routing in [parsers/router.py](credit-card-statement-parser-backend/parsers/router.py).
@@ -155,7 +159,7 @@ Parser return shape:
 
 ## Known Limitations and Future Work
 
-- Currently implemented banks: ICICI, Kotak; extend to HDFC, SBI, Axis for the full assignment scope.
+- Currently implemented banks: ICICI, Kotak, HDFC; extend to SBI, Axis for the full assignment scope.
 - OCR dependencies are optional and system-specific; ensure Tesseract/Poppler are installed for image-based PDFs.
 - Date/amount formats vary across issuers; parsers can be further hardened with more patterns and robust normalization (see [utils/text_utils.py](credit-card-statement-parser-backend/utils/text_utils.py)).
 - No authentication or persistence (stateless API).
@@ -179,9 +183,6 @@ Frontend ([package.json](credit-card-statement-parser-frontend/package.json)):
 
 Backend:
 - python [app.py](credit-card-statement-parser-backend/app.py) — Start API
-
----
-```// filepath: d:\credit-card-statement-parser\README.md
 # Credit Card Statement Parser
 
 Modern, full-stack solution to parse PDF credit card statements and extract 5 key data points using a hybrid text extraction approach (text-first with OCR fallback), plus a sleek React UI for uploads and results.
