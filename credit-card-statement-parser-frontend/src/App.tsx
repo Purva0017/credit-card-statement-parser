@@ -18,6 +18,7 @@ interface SnackbarMessage {
 
 // Prefer env override if provided, otherwise default to hosted backend
 const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL ?? 'https://credit-card-statement-parser-t0er.onrender.com';
+// const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL ?? 'http://127.0.0.1:5000';
 
 function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -103,7 +104,12 @@ function App() {
       about: aboutRef,
     };
 
-    refs[sectionId]?.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = refs[sectionId]?.current;
+    if (el) {
+      // Use scroll-margin-top on sections to avoid hiding behind fixed navbar
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setActiveSection(sectionId);
+    }
     setIsMenuOpen(false);
   };
 
@@ -153,7 +159,8 @@ function App() {
         throw new Error(errorData.error || 'Failed to parse statement');
       }
 
-      const data = await response.json();
+  const data = await response.json();
+  console.log('Parsed response keys:', Object.keys(data));
       setParsedData(data);
       showSnackbar('Statement parsed successfully!', 'success');
 
@@ -223,16 +230,35 @@ function App() {
       .join(' ');
   };
 
+  const getCurrencySymbol = (): string => {
+    const sym = (parsedData as any)?.currency_symbol;
+    if (typeof sym === 'string' && sym.trim()) return sym.trim();
+    return '₹';
+  };
+
   const formatFieldValue = (key: string, value: string | number | null): string => {
-    if (value === null) return 'N/A';
+    if (value === null) {
+      // Special-case for total_amount_due handled below; others show N/A
+      if (key !== 'total_amount_due') return 'N/A';
+    }
 
     if (key === 'card_last4' && value) {
       return `•••• ${value}`;
     }
 
-    if (key === 'total_amount_due' && value) {
-      const numValue = typeof value === 'string' ? parseFloat(value) : value;
-      return `$${numValue.toFixed(2)}`;
+    if (key === 'total_amount_due') {
+      if (value === null || value === undefined || String(value).trim() === '') {
+        return '-';
+      }
+      const symbol = getCurrencySymbol();
+      const numValue = typeof value === 'number'
+        ? value
+        : parseFloat(String(value).replace(/[^0-9.-]/g, ''));
+      if (!Number.isNaN(numValue)) {
+        return `${symbol}${numValue.toFixed(2)}`;
+      }
+      // If parsing fails but some string exists, show raw with symbol; else placeholder
+      return String(value).trim() ? `${symbol}${value}` : '-';
     }
 
     return String(value);
@@ -368,9 +394,11 @@ function App() {
         <section
           ref={homeRef}
           className="min-h-screen flex items-center justify-center relative overflow-hidden"
-          style={{ transform: `translateY(${parallaxOffset}px)` }}
         >
-          <div className="absolute inset-0 opacity-10">
+          <div
+            className="absolute inset-0 opacity-10"
+            style={{ transform: `translateY(${parallaxOffset}px)` }}
+          >
             <div className={`absolute top-1/4 left-1/4 w-96 h-96 rounded-full ${theme === 'light' ? 'bg-purple-300' : 'bg-purple-600'} blur-3xl animate-pulse`}></div>
             <div className={`absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full ${theme === 'light' ? 'bg-blue-300' : 'bg-blue-600'} blur-3xl animate-pulse`} style={{ animationDelay: '1s' }}></div>
           </div>
@@ -391,7 +419,7 @@ function App() {
           </div>
         </section>
 
-        <section ref={uploadRef} className="min-h-screen flex items-center justify-center px-8 py-20">
+  <section ref={uploadRef} className="min-h-screen flex items-center justify-center px-8 py-20">
           <div className={`max-w-2xl w-full ${glassEffect} rounded-3xl p-12 shadow-2xl animate-fade-in-up`}>
             <h2 className="text-4xl font-medium mb-4">Upload Statement</h2>
             <p className={`mb-8 ${theme === 'light' ? 'text-neutral-600' : 'text-neutral-400'}`}>
@@ -445,16 +473,16 @@ function App() {
           </div>
         </section>
 
-        <section ref={resultsRef} className="min-h-screen flex items-center justify-center px-8 py-20">
+  <section ref={resultsRef} className="min-h-screen flex items-center justify-center px-8 py-20">
           <div className="max-w-4xl w-full">
             <h2 className="text-4xl font-medium mb-12 text-center">Analysis Results</h2>
 
             {parsedData ? (
               <div className="space-y-6 animate-fade-in-up">
-                <div className={`${glassEffect} rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]`}>
+                <div className={`${glassEffect} rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] relative z-10`}>
                   <div className="grid md:grid-cols-2 gap-6">
                     {Object.entries(parsedData)
-                      .filter(([key]) => key !== 'total_amount_due')
+                      .filter(([key]) => !['total_amount_due', 'currency_symbol', '__debug'].includes(key))
                       .map(([key, value]) => (
                         <div key={key}>
                           <p className={`text-sm mb-2 ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-500'}`}>
@@ -467,16 +495,14 @@ function App() {
                       ))}
                   </div>
 
-                  {parsedData.total_amount_due && (
-                    <div className="mt-8 pt-8 border-t border-neutral-200 dark:border-neutral-700">
-                      <p className={`text-sm mb-2 ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-500'}`}>
-                        Total Amount Due
-                      </p>
-                      <p className="text-4xl font-medium text-purple-600 dark:text-purple-400">
-                        {formatFieldValue('total_amount_due', parsedData.total_amount_due)}
-                      </p>
-                    </div>
-                  )}
+                  <div className="mt-8 pt-8 border-t border-neutral-200 dark:border-neutral-700 relative z-10">
+                    <p className={`text-sm mb-2 ${theme === 'light' ? 'text-neutral-500' : 'text-neutral-500'}`}>
+                      Total Amount Due
+                    </p>
+                    <p className="text-4xl font-medium text-purple-700 dark:text-purple-300">
+                      {formatFieldValue('total_amount_due', parsedData.total_amount_due)}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="text-center">
@@ -501,7 +527,7 @@ function App() {
           </div>
         </section>
 
-        <section ref={aboutRef} className="min-h-screen flex items-center justify-center px-8 py-20">
+  <section ref={aboutRef} className="min-h-screen flex items-center justify-center px-8 py-20">
           <div className={`max-w-3xl w-full ${glassEffect} rounded-3xl p-12 shadow-2xl animate-fade-in-up`}>
             <h2 className="text-4xl font-medium mb-6">About</h2>
             <div className={`space-y-4 ${theme === 'light' ? 'text-neutral-600' : 'text-neutral-400'} text-lg leading-relaxed`}>
